@@ -560,13 +560,38 @@
 
                 console.log('Abrindo PDF:', filename, 'na página', pageNum);
 
-                // Usa um proxy CORS ou iframe do Google Drive
-                // Opção 1: Abrir no Google Drive Viewer (mais confiável)
-                const viewerUrl = `https://drive.google.com/file/d/${driveId}/preview#page=${pageNum}`;
+                // URL do Google Drive Viewer
+                const viewerUrl = `https://drive.google.com/file/d/${driveId}/preview`;
                 
                 // Substitui o canvas por um iframe
                 const canvasContainer = document.getElementById('pdfCanvasContainer');
+                
+                // Adiciona banner indicando a página
                 canvasContainer.innerHTML = `
+                    ${pageNum > 1 ? `
+                    <div style="
+                        position: absolute;
+                        top: 20px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                        color: white;
+                        padding: 12px 24px;
+                        border-radius: 12px;
+                        box-shadow: 0 10px 30px rgba(245, 158, 11, 0.4);
+                        z-index: 1000;
+                        font-weight: 600;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        animation: pulse 2s ease-in-out infinite;
+                    ">
+                        <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span>📍 Navegue até a PÁGINA ${pageNum}</span>
+                    </div>
+                    ` : ''}
                     <iframe 
                         src="${viewerUrl}" 
                         style="width: 100%; height: 100%; border: none; border-radius: 8px;"
@@ -575,9 +600,11 @@
                 `;
                 
                 pdfTitle.textContent = filename.replace('.pdf', '').replace(/-/g, ' ').toUpperCase();
-                pdfSubtitle.textContent = `Página ${pageNum}`;
+                pdfSubtitle.textContent = pageNum > 1 
+                    ? `📍 Informação encontrada na página ${pageNum}` 
+                    : 'Documento completo';
                 
-                // Esconde controles de navegação (iframe do Drive tem seus próprios)
+                // Esconde controles de navegação
                 document.querySelector('.pdf-controls').style.display = 'none';
                 
             } catch (error) {
@@ -698,9 +725,17 @@
 
                 let htmlContent = marked.parse(respostaTextoFinal);
                 
+                // Substitui links FONTE: por clicáveis
                 htmlContent = htmlContent.replace(/href="FONTE:([^:]+):(\d+)"/g, (match, filename, page) => {
                     return `href="#" data-pdf="${filename}" data-page="${page}" class="pdf-link"`;
                 });
+
+                // FORÇA quebras de linha no HTML
+                // Remove <p> tags desnecessários que o markdown pode adicionar
+                htmlContent = htmlContent.replace(/<p>\s*<\/p>/g, '');
+                
+                // Garante espaçamento entre parágrafos
+                htmlContent = htmlContent.replace(/<\/p>\s*<p>/g, '</p><div style="height: 16px;"></div><p>');
 
                 respostaTexto.innerHTML = htmlContent;
                 
