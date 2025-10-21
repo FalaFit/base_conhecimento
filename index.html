@@ -38,11 +38,12 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // ⚠️ CONFIGURE AQUI AS CREDENCIAIS E WEBHOOK
+        // ⚙️ CONFIGURAÇÕES
         const AUTH_CONFIG = {
             username: 'admin',
             password: 'mvpmvp',
-            WEBHOOK_URL: 'https://planejamentocomercialtvx.app.n8n.cloud/webhook/9d54034b-156c-473a-8a81-5cd73cc2b63d'
+            WEBHOOK_URL: 'https://planejamentocomercialtvx.app.n8n.cloud/webhook/9d54034b-156c-473a-8a81-5cd73cc2b63d',
+            SESSION_TIMEOUT: 2 * 60 * 60 * 1000 // 2 horas em milissegundos
         };
 
         function LoginScreen({ onLogin }) {
@@ -59,7 +60,13 @@
 
                 setTimeout(() => {
                     if (username === AUTH_CONFIG.username && password === AUTH_CONFIG.password) {
-                        localStorage.setItem('authenticated', 'true');
+                        // Salva com timestamp de expiração
+                        const loginData = {
+                            authenticated: true,
+                            timestamp: Date.now(),
+                            expiresAt: Date.now() + AUTH_CONFIG.SESSION_TIMEOUT
+                        };
+                        localStorage.setItem('authData', JSON.stringify(loginData));
                         onLogin();
                     } else {
                         setError('Usuário ou senha incorretos');
@@ -72,14 +79,12 @@
 
             return (
                 <div className="min-h-screen flex items-center justify-center px-4">
-                    {/* Background Effects */}
                     <div className="absolute inset-0 overflow-hidden pointer-events-none">
                         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
                         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
                     </div>
 
                     <div className="w-full max-w-md relative animate-fade-in">
-                        {/* Logo/Header Card */}
                         <div className="text-center mb-8">
                             <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-2xl pulse-glow mb-6">
                                 <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -90,11 +95,9 @@
                             <p className="text-slate-400">Acesso seguro ao sistema de consultas</p>
                         </div>
 
-                        {/* Login Card */}
                         <div className={`bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700 shadow-2xl overflow-hidden ${shake ? 'animate-shake' : ''}`}>
                             <div className="p-8">
                                 <form onSubmit={handleLogin} className="space-y-6">
-                                    {/* Username Input */}
                                     <div>
                                         <label className="block text-sm font-medium text-slate-300 mb-2">
                                             Usuário
@@ -117,7 +120,6 @@
                                         </div>
                                     </div>
 
-                                    {/* Password Input */}
                                     <div>
                                         <label className="block text-sm font-medium text-slate-300 mb-2">
                                             Senha
@@ -140,7 +142,6 @@
                                         </div>
                                     </div>
 
-                                    {/* Error Message */}
                                     {error && (
                                         <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-3 flex items-center gap-2 animate-fade-in">
                                             <svg className="w-5 h-5 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -150,7 +151,6 @@
                                         </div>
                                     )}
 
-                                    {/* Submit Button */}
                                     <button
                                         type="submit"
                                         disabled={loading}
@@ -176,17 +176,11 @@
                                 </form>
                             </div>
 
-                            {/* Footer da Card */}
                             <div className="bg-slate-900/30 px-8 py-4 border-t border-slate-700">
                                 <p className="text-xs text-slate-500 text-center">
-                                    🔒 Acesso seguro e criptografado
+                                    🔒 Sessão expira em 2 horas de inatividade
                                 </p>
                             </div>
-                        </div>
-
-                        {/* Info adicional */}
-                        <div className="mt-6 text-center text-sm text-slate-500">
-                            <p>Sistema desenvolvido com segurança e inteligência artificial</p>
                         </div>
                     </div>
 
@@ -210,6 +204,7 @@
             const [resposta, setResposta] = useState(null);
             const [error, setError] = useState(null);
             const [historico, setHistorico] = useState([]);
+            const [debugInfo, setDebugInfo] = useState(null);
 
             const fazerPergunta = async () => {
                 if (!pergunta.trim()) return;
@@ -217,30 +212,113 @@
                 setLoading(true);
                 setError(null);
                 setResposta(null);
+                setDebugInfo(null);
 
                 try {
+                    console.log('🚀 Enviando requisição para:', AUTH_CONFIG.WEBHOOK_URL);
+                    console.log('📝 Pergunta:', pergunta.trim());
+
                     const response = await fetch(AUTH_CONFIG.WEBHOOK_URL, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        mode: 'cors',
                         body: JSON.stringify({ pergunta: pergunta.trim() })
                     });
 
+                    console.log('📡 Status da resposta:', response.status);
+                    console.log('📡 Headers:', [...response.headers.entries()]);
+
                     if (!response.ok) {
-                        throw new Error(`Erro ${response.status}: ${response.statusText}`);
+                        throw new Error(`Erro HTTP ${response.status}: ${response.statusText}`);
                     }
 
-                    const data = await response.json();
+                    const contentType = response.headers.get('content-type');
+                    console.log('📄 Content-Type:', contentType);
+
+                    let data;
+                    if (contentType && contentType.includes('application/json')) {
+                        data = await response.json();
+                    } else {
+                        const text = await response.text();
+                        console.log('📝 Resposta em texto:', text);
+                        try {
+                            data = JSON.parse(text);
+                        } catch (e) {
+                            throw new Error('Resposta não está em formato JSON válido');
+                        }
+                    }
+
+                    console.log('✅ Dados recebidos:', data);
+
+                    // Adapta a estrutura da resposta dependendo do formato
+                    let respostaFormatada;
                     
-                    setResposta(data);
+                    if (data.choices && data.choices[0] && data.choices[0].message) {
+                        // Formato OpenAI direto
+                        respostaFormatada = {
+                            resposta: data.choices[0].message.content,
+                            modelo: data.model || 'gpt-4o',
+                            timestamp: new Date().toISOString(),
+                            tokens: data.usage
+                        };
+                    } else if (data.resposta || typeof data === 'string') {
+                        // Formato customizado ou string direta
+                        respostaFormatada = {
+                            resposta: data.resposta || data,
+                            timestamp: new Date().toISOString()
+                        };
+                    } else {
+                        // Formato desconhecido - mostra tudo
+                        respostaFormatada = {
+                            resposta: JSON.stringify(data, null, 2),
+                            timestamp: new Date().toISOString()
+                        };
+                    }
+                    
+                    setResposta(respostaFormatada);
                     setHistorico(prev => [{
                         pergunta: pergunta.trim(),
-                        resposta: data,
+                        resposta: respostaFormatada,
                         timestamp: new Date().toISOString()
                     }, ...prev]);
                     
                     setPergunta('');
+                    
                 } catch (err) {
-                    setError(err.message || 'Erro ao consultar. Verifique a conexão com o servidor.');
+                    console.error('❌ Erro completo:', err);
+                    
+                    let mensagemErro = err.message;
+                    
+                    if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+                        mensagemErro = `
+🚨 ERRO DE CONEXÃO (CORS/Network)
+
+Possíveis causas:
+1. ❌ Workflow não está ATIVO no n8n
+2. ❌ CORS não está habilitado no Webhook
+3. ❌ URL do webhook incorreta
+4. ❌ Problemas de rede/firewall
+
+SOLUÇÃO NO N8N:
+• Ative o workflow "Políticas pt.2"
+• No nó Webhook > Options > Ative CORS
+• Allowed Origins: * (ou seu domínio específico)
+• Salve e reative o workflow
+
+URL testada: ${AUTH_CONFIG.WEBHOOK_URL}
+                        `.trim();
+                    }
+                    
+                    setError(mensagemErro);
+                    setDebugInfo({
+                        erro: err.toString(),
+                        stack: err.stack,
+                        url: AUTH_CONFIG.WEBHOOK_URL,
+                        timestamp: new Date().toISOString()
+                    });
                 } finally {
                     setLoading(false);
                 }
@@ -254,8 +332,31 @@
             };
 
             const handleLogout = () => {
-                localStorage.removeItem('authenticated');
+                localStorage.removeItem('authData');
                 onLogout();
+            };
+
+            const testarConexao = async () => {
+                setLoading(true);
+                setError(null);
+                
+                try {
+                    console.log('🔍 Testando conexão...');
+                    const response = await fetch(AUTH_CONFIG.WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        mode: 'cors',
+                        body: JSON.stringify({ pergunta: 'teste de conexão' })
+                    });
+                    
+                    console.log('✅ Conexão OK! Status:', response.status);
+                    setError(`✅ Conexão estabelecida! Status: ${response.status}`);
+                } catch (err) {
+                    console.error('❌ Falha na conexão:', err);
+                    setError(`❌ Falha: ${err.message}`);
+                }
+                
+                setLoading(false);
             };
 
             const perguntasExemplo = [
@@ -267,7 +368,6 @@
 
             return (
                 <div className="min-h-screen animate-fade-in">
-                    {/* Header */}
                     <div className="bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-10">
                         <div className="max-w-6xl mx-auto px-6 py-4">
                             <div className="flex items-center justify-between">
@@ -279,24 +379,31 @@
                                     </div>
                                     <div>
                                         <h1 className="text-xl font-bold text-white">Sistema de Políticas Inteligente</h1>
-                                        <p className="text-sm text-slate-400">Consulte políticas e documentos corporativos com IA</p>
+                                        <p className="text-sm text-slate-400">Consulte políticas com IA</p>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={handleLogout}
-                                    className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors text-sm"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                    </svg>
-                                    Sair
-                                </button>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={testarConexao}
+                                        className="flex items-center gap-2 px-3 py-2 bg-green-600/20 hover:bg-green-600/30 text-green-300 rounded-lg transition-colors text-sm"
+                                    >
+                                        🔍 Testar Conexão
+                                    </button>
+                                    <button
+                                        onClick={handleLogout}
+                                        className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors text-sm"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                        </svg>
+                                        Sair
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <div className="max-w-6xl mx-auto px-6 py-8">
-                        {/* Input Area */}
                         <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700 p-6 mb-6 shadow-2xl">
                             <label className="block text-sm font-medium text-slate-300 mb-3">
                                 Faça sua pergunta sobre as políticas:
@@ -337,7 +444,6 @@
                                 </button>
                             </div>
 
-                            {/* Perguntas Exemplo */}
                             {!resposta && !loading && (
                                 <div className="mt-4">
                                     <p className="text-xs text-slate-400 mb-2">Exemplos de perguntas:</p>
@@ -356,20 +462,31 @@
                             )}
                         </div>
 
-                        {/* Error Message */}
                         {error && (
-                            <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-4 mb-6 flex items-start gap-3 animate-fade-in">
-                                <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <div className="flex-1">
-                                    <p className="text-red-300 font-medium">Erro ao consultar</p>
-                                    <p className="text-red-200/80 text-sm mt-1">{error}</p>
+                            <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-4 mb-6 animate-fade-in">
+                                <div className="flex items-start gap-3">
+                                    <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <div className="flex-1">
+                                        <p className="text-red-300 font-medium mb-2">Erro ao consultar</p>
+                                        <pre className="text-red-200/80 text-xs whitespace-pre-wrap font-mono bg-red-900/20 p-3 rounded">{error}</pre>
+                                    </div>
                                 </div>
+                                
+                                {debugInfo && (
+                                    <details className="mt-4">
+                                        <summary className="text-xs text-red-300 cursor-pointer hover:text-red-200">
+                                            🔍 Ver detalhes técnicos
+                                        </summary>
+                                        <pre className="mt-2 text-xs text-red-200/60 whitespace-pre-wrap font-mono bg-red-900/20 p-3 rounded">
+                                            {JSON.stringify(debugInfo, null, 2)}
+                                        </pre>
+                                    </details>
+                                )}
                             </div>
                         )}
 
-                        {/* Loading State */}
                         {loading && (
                             <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700 p-8 text-center animate-fade-in">
                                 <svg className="animate-spin h-12 w-12 text-blue-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
@@ -381,7 +498,6 @@
                             </div>
                         )}
 
-                        {/* Response Area */}
                         {resposta && (
                             <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700 overflow-hidden shadow-2xl animate-fade-in">
                                 <div className="bg-green-500/10 border-b border-slate-700 px-6 py-3 flex items-center gap-2">
@@ -426,7 +542,16 @@
                                         </div>
                                     )}
 
-                                    <div className="mt-6 pt-4 border-t border-slate-700/50 flex items-center justify-between text-xs text-slate-500">
+                                    {resposta.tokens && (
+                                        <div className="mt-4 pt-4 border-t border-slate-700/50">
+                                            <p className="text-xs text-slate-500">
+                                                💬 Tokens: {resposta.tokens.total_tokens} 
+                                                ({resposta.tokens.prompt_tokens} prompt + {resposta.tokens.completion_tokens} completion)
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    <div className="mt-4 pt-4 border-t border-slate-700/50 flex items-center justify-between text-xs text-slate-500">
                                         <span>Modelo: {resposta.modelo || 'GPT-4o'}</span>
                                         <span>{new Date(resposta.timestamp).toLocaleString('pt-BR')}</span>
                                     </div>
@@ -434,7 +559,6 @@
                             </div>
                         )}
 
-                        {/* History */}
                         {historico.length > 0 && (
                             <div className="mt-8">
                                 <h2 className="text-lg font-semibold text-slate-300 mb-4">Histórico de Consultas</h2>
@@ -471,8 +595,52 @@
             const [authenticated, setAuthenticated] = useState(false);
 
             useEffect(() => {
-                const isAuth = localStorage.getItem('authenticated') === 'true';
-                setAuthenticated(isAuth);
+                // Verifica autenticação com expiração
+                const authDataStr = localStorage.getItem('authData');
+                
+                if (authDataStr) {
+                    try {
+                        const authData = JSON.parse(authDataStr);
+                        const now = Date.now();
+                        
+                        // Verifica se a sessão expirou
+                        if (authData.expiresAt && now > authData.expiresAt) {
+                            console.log('🕐 Sessão expirada');
+                            localStorage.removeItem('authData');
+                            setAuthenticated(false);
+                        } else {
+                            console.log('✅ Sessão válida');
+                            setAuthenticated(authData.authenticated === true);
+                        }
+                    } catch (e) {
+                        console.error('❌ Erro ao validar sessão:', e);
+                        localStorage.removeItem('authData');
+                        setAuthenticated(false);
+                    }
+                } else {
+                    setAuthenticated(false);
+                }
+
+                // Verifica periodicamente se a sessão expirou (a cada 1 minuto)
+                const intervalId = setInterval(() => {
+                    const authDataStr = localStorage.getItem('authData');
+                    if (authDataStr) {
+                        try {
+                            const authData = JSON.parse(authDataStr);
+                            const now = Date.now();
+                            
+                            if (authData.expiresAt && now > authData.expiresAt) {
+                                console.log('🕐 Sessão expirou durante uso');
+                                localStorage.removeItem('authData');
+                                setAuthenticated(false);
+                            }
+                        } catch (e) {
+                            console.error('❌ Erro na verificação periódica:', e);
+                        }
+                    }
+                }, 60000); // Verifica a cada 1 minuto
+
+                return () => clearInterval(intervalId);
             }, []);
 
             if (!authenticated) {
