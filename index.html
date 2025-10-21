@@ -558,21 +558,31 @@
                 pdfTitle.textContent = 'Carregando documento...';
                 pdfSubtitle.textContent = 'Aguarde...';
 
-                const pdfUrl = `https://drive.google.com/uc?export=download&id=${driveId}`;
-                
                 console.log('Abrindo PDF:', filename, 'na página', pageNum);
+
+                // Usa um proxy CORS ou iframe do Google Drive
+                // Opção 1: Abrir no Google Drive Viewer (mais confiável)
+                const viewerUrl = `https://drive.google.com/file/d/${driveId}/preview#page=${pageNum}`;
                 
-                const loadingTask = pdfjsLib.getDocument(pdfUrl);
-                pdfDoc = await loadingTask.promise;
+                // Substitui o canvas por um iframe
+                const canvasContainer = document.getElementById('pdfCanvasContainer');
+                canvasContainer.innerHTML = `
+                    <iframe 
+                        src="${viewerUrl}" 
+                        style="width: 100%; height: 100%; border: none; border-radius: 8px;"
+                        allow="autoplay"
+                    ></iframe>
+                `;
                 
-                totalPagesSpan.textContent = pdfDoc.numPages;
                 pdfTitle.textContent = filename.replace('.pdf', '').replace(/-/g, ' ').toUpperCase();
-                pdfSubtitle.textContent = `${pdfDoc.numPages} páginas disponíveis`;
+                pdfSubtitle.textContent = `Página ${pageNum}`;
                 
-                await renderPage(pageNum);
+                // Esconde controles de navegação (iframe do Drive tem seus próprios)
+                document.querySelector('.pdf-controls').style.display = 'none';
+                
             } catch (error) {
                 console.error('Erro ao abrir PDF:', error);
-                alert('Erro ao carregar o PDF. Verifique se o arquivo está compartilhado publicamente no Google Drive.');
+                alert('Erro ao carregar o PDF. Tente novamente.');
                 closePDFViewer();
             }
         }
@@ -580,6 +590,14 @@
         function closePDFViewer() {
             pdfModal.classList.add('hidden');
             pdfModal.classList.remove('show');
+            
+            // Restaura o canvas
+            const canvasContainer = document.getElementById('pdfCanvasContainer');
+            canvasContainer.innerHTML = '<canvas id="pdfCanvas"></canvas>';
+            
+            // Mostra controles novamente
+            document.querySelector('.pdf-controls').style.display = 'flex';
+            
             if (pdfDoc) {
                 pdfDoc.destroy();
                 pdfDoc = null;
