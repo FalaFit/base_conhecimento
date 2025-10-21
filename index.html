@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Políticas Inteligente</title>
+    <title>Sistema de Políticas Inteligente - Premium</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
@@ -14,18 +16,14 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
-        .animate-fade-in {
-            animation: fadeIn 0.5s ease-out;
-        }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
         
         @keyframes pulse-glow {
             0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
             50% { box-shadow: 0 0 30px rgba(59, 130, 246, 0.5); }
         }
         
-        .pulse-glow {
-            animation: pulse-glow 2s ease-in-out infinite;
-        }
+        .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
 
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
@@ -33,14 +31,188 @@
             20%, 40%, 60%, 80% { transform: translateX(5px); }
         }
         
-        .animate-shake {
-            animation: shake 0.5s;
+        .animate-shake { animation: shake 0.5s; }
+        .hidden { display: none; }
+
+        #respostaTexto a {
+            color: #60a5fa;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        #respostaTexto a:hover {
+            background: rgba(96, 165, 250, 0.1);
+            color: #93c5fd;
         }
 
-        .hidden { display: none; }
+        .pdf-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .pdf-viewer-container {
+            width: 90%;
+            max-width: 1200px;
+            height: 90vh;
+            background: #1e293b;
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .pdf-header {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+
+        .pdf-controls {
+            background: #334155;
+            padding: 12px 24px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .pdf-canvas-container {
+            flex: 1;
+            overflow: auto;
+            background: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        #pdfCanvas {
+            max-width: 100%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+        }
+
+        .pdf-btn {
+            background: #475569;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .pdf-btn:hover {
+            background: #64748b;
+            transform: translateY(-1px);
+        }
+
+        .pdf-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            color: #cbd5e1;
+            font-size: 14px;
+            padding: 8px 16px;
+            background: #1e293b;
+            border-radius: 8px;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .pdf-modal.show .pdf-viewer-container {
+            animation: slideUp 0.3s ease-out;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-screen">
+    
+    <!-- Modal PDF Viewer -->
+    <div id="pdfModal" class="pdf-modal hidden">
+        <div class="pdf-viewer-container">
+            <div class="pdf-header">
+                <div>
+                    <h3 id="pdfTitle" class="text-lg font-bold">Documento</h3>
+                    <p id="pdfSubtitle" class="text-sm text-blue-100 opacity-90">Visualização do PDF</p>
+                </div>
+                <button id="closePdfBtn" class="pdf-btn">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                    Fechar
+                </button>
+            </div>
+            
+            <div class="pdf-controls">
+                <button id="prevPageBtn" class="pdf-btn">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Anterior
+                </button>
+                
+                <div class="page-info">
+                    <span id="currentPage">1</span> / <span id="totalPages">1</span>
+                </div>
+                
+                <button id="nextPageBtn" class="pdf-btn">
+                    Próxima
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+
+                <div class="flex gap-2">
+                    <button id="zoomOutBtn" class="pdf-btn">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"/>
+                        </svg>
+                    </button>
+                    <button id="zoomInBtn" class="pdf-btn">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="pdf-canvas-container" id="pdfCanvasContainer">
+                <canvas id="pdfCanvas"></canvas>
+            </div>
+
+            <div class="bg-slate-800 px-6 py-3 text-sm text-slate-400 text-center">
+                💡 Use as setas do teclado para navegar | ESC para fechar
+            </div>
+        </div>
+    </div>
+
     <!-- Tela de Login -->
     <div id="loginScreen" class="min-h-screen flex items-center justify-center px-4">
         <div class="absolute inset-0 overflow-hidden pointer-events-none">
@@ -52,11 +224,11 @@
             <div class="text-center mb-8">
                 <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-2xl pulse-glow mb-6">
                     <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                     </svg>
                 </div>
-                <h1 class="text-3xl font-bold text-white mb-2">Sistema de Políticas</h1>
-                <p class="text-slate-400">Acesso seguro ao sistema de consultas</p>
+                <h1 class="text-3xl font-bold text-white mb-2">Sistema de Políticas Premium</h1>
+                <p class="text-slate-400">Acesso seguro com visualização integrada</p>
             </div>
 
             <div id="loginCard" class="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700 shadow-2xl overflow-hidden">
@@ -67,16 +239,10 @@
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <svg class="h-5 w-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                                     </svg>
                                 </div>
-                                <input
-                                    type="text"
-                                    id="username"
-                                    class="w-full bg-slate-900/50 text-white placeholder-slate-500 rounded-xl border border-slate-600 pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                    placeholder="Digite seu usuário"
-                                    required
-                                />
+                                <input type="text" id="username" class="w-full bg-slate-900/50 text-white placeholder-slate-500 rounded-xl border border-slate-600 pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Digite seu usuário" required/>
                             </div>
                         </div>
 
@@ -85,31 +251,21 @@
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <svg class="h-5 w-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                                     </svg>
                                 </div>
-                                <input
-                                    type="password"
-                                    id="password"
-                                    class="w-full bg-slate-900/50 text-white placeholder-slate-500 rounded-xl border border-slate-600 pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                    placeholder="Digite sua senha"
-                                    required
-                                />
+                                <input type="password" id="password" class="w-full bg-slate-900/50 text-white placeholder-slate-500 rounded-xl border border-slate-600 pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Digite sua senha" required/>
                             </div>
                         </div>
 
                         <div id="loginError" class="hidden bg-red-500/10 border border-red-500/50 rounded-xl p-3 flex items-center gap-2">
                             <svg class="w-5 h-5 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             <p class="text-sm text-red-300">Usuário ou senha incorretos</p>
                         </div>
 
-                        <button
-                            type="submit"
-                            id="loginButton"
-                            class="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-blue-500/50"
-                        >
+                        <button type="submit" id="loginButton" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-blue-500/50">
                             Entrar no Sistema
                         </button>
                     </form>
@@ -124,88 +280,73 @@
 
     <!-- Aplicação Principal -->
     <div id="mainApp" class="hidden min-h-screen animate-fade-in">
-        <!-- Header -->
         <div class="bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-10">
             <div class="max-w-6xl mx-auto px-6 py-4">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
                             <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                             </svg>
                         </div>
                         <div>
-                            <h1 class="text-xl font-bold text-white">Sistema de Políticas Inteligente</h1>
-                            <p class="text-sm text-slate-400">Consulte políticas com IA</p>
+                            <h1 class="text-xl font-bold text-white">Sistema Premium de Políticas</h1>
+                            <p class="text-sm text-slate-400">Com visualização integrada de documentos</p>
                         </div>
                     </div>
-                    <button
-                        id="logoutButton"
-                        class="px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors text-sm"
-                    >
+                    <button id="logoutButton" class="px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors text-sm">
                         Sair
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Conteúdo -->
         <div class="max-w-6xl mx-auto px-6 py-8">
-            <!-- Input Area -->
             <div class="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700 p-6 mb-6 shadow-2xl">
                 <label class="block text-sm font-medium text-slate-300 mb-3">
                     Faça sua pergunta sobre as políticas:
                 </label>
                 
                 <div class="flex gap-3">
-                    <textarea
-                        id="perguntaInput"
-                        placeholder="Ex: Qual a política sobre trabalho remoto?"
-                        class="flex-1 bg-slate-900/50 text-white placeholder-slate-500 rounded-xl border border-slate-600 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                        rows="3"
-                    ></textarea>
+                    <textarea id="perguntaInput" placeholder="Ex: Qual a política sobre brindes corporativos?" class="flex-1 bg-slate-900/50 text-white placeholder-slate-500 rounded-xl border border-slate-600 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" rows="3"></textarea>
                     
-                    <button
-                        id="consultarButton"
-                        class="bg-blue-500 hover:bg-blue-600 disabled:bg-slate-700 disabled:cursor-not-allowed text-white px-6 rounded-xl transition-all duration-200 flex items-center gap-2 font-medium shadow-lg hover:shadow-blue-500/50"
-                    >
+                    <button id="consultarButton" class="bg-blue-500 hover:bg-blue-600 disabled:bg-slate-700 disabled:cursor-not-allowed text-white px-6 rounded-xl transition-all duration-200 flex items-center gap-2 font-medium shadow-lg hover:shadow-blue-500/50">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
                         </svg>
                         Consultar
                     </button>
                 </div>
 
-                <!-- Exemplos -->
-<div id="exemplosArea" class="mt-4">
-    <p class="text-xs text-slate-400 mb-3">💡 Exemplos de perguntas:</p>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-        <button class="exemplo-btn text-xs bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 px-3 py-2 rounded-lg transition-colors text-left">
-            Quais políticas corporativas temos?
-        </button>
-        <button class="exemplo-btn text-xs bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 px-3 py-2 rounded-lg transition-colors text-left">
-            Regras sobre presentes e brindes
-        </button>
-        <button class="exemplo-btn text-xs bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 px-3 py-2 rounded-lg transition-colors text-left">
-            Como funciona nossa política anticorrupção?
-        </button>
-        <button class="exemplo-btn text-xs bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 px-3 py-2 rounded-lg transition-colors text-left">
-            O que diz sobre proteção de dados pessoais?
-        </button>
-        <button class="exemplo-btn text-xs bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 px-3 py-2 rounded-lg transition-colors text-left">
-            Política de responsabilidade socioambiental
-        </button>
-        <button class="exemplo-btn text-xs bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 px-3 py-2 rounded-lg transition-colors text-left">
-            Diretrizes sobre lavagem de dinheiro
-        </button>
-    </div>
-</div>
+                <div id="exemplosArea" class="mt-4">
+                    <p class="text-xs text-slate-400 mb-3">💡 Exemplos de perguntas:</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                        <button class="exemplo-btn text-xs bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 px-3 py-2 rounded-lg transition-colors text-left">
+                            Quais políticas corporativas temos?
+                        </button>
+                        <button class="exemplo-btn text-xs bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 px-3 py-2 rounded-lg transition-colors text-left">
+                            Regras sobre presentes e brindes
+                        </button>
+                        <button class="exemplo-btn text-xs bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 px-3 py-2 rounded-lg transition-colors text-left">
+                            Como funciona nossa política anticorrupção?
+                        </button>
+                        <button class="exemplo-btn text-xs bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 px-3 py-2 rounded-lg transition-colors text-left">
+                            O que diz sobre proteção de dados pessoais?
+                        </button>
+                        <button class="exemplo-btn text-xs bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 px-3 py-2 rounded-lg transition-colors text-left">
+                            Política de responsabilidade socioambiental
+                        </button>
+                        <button class="exemplo-btn text-xs bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 px-3 py-2 rounded-lg transition-colors text-left">
+                            Diretrizes sobre lavagem de dinheiro
+                        </button>
+                    </div>
+                </div>
+            </div>
 
-            <!-- Error Message -->
             <div id="errorArea" class="hidden bg-red-500/10 border border-red-500/50 rounded-xl p-4 mb-6 animate-fade-in">
                 <div class="flex items-start gap-3">
                     <svg class="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                     <div class="flex-1">
                         <p class="text-red-300 font-medium">Erro ao consultar</p>
@@ -214,43 +355,62 @@
                 </div>
             </div>
 
-            <!-- Loading State -->
             <div id="loadingArea" class="hidden bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700 p-8 text-center animate-fade-in">
                 <svg class="animate-spin h-12 w-12 text-blue-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <p class="text-slate-300">Analisando documentos...</p>
+                <p class="text-slate-300">Analisando documentos com IA...</p>
                 <p class="text-slate-500 text-sm mt-2">Buscando as informações mais relevantes</p>
             </div>
 
-            <!-- Response Area -->
             <div id="respostaArea" class="hidden bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700 overflow-hidden shadow-2xl animate-fade-in">
                 <div class="bg-green-500/10 border-b border-slate-700 px-6 py-3 flex items-center gap-2">
                     <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                     <span class="text-green-300 font-medium">Resposta encontrada</span>
                 </div>
 
                 <div class="p-6">
-                    <div id="respostaTexto" class="text-slate-100 leading-relaxed whitespace-pre-wrap"></div>
+                    <div id="respostaTexto" class="text-slate-100 leading-relaxed prose prose-invert max-w-none"></div>
                     
-                    <div class="mt-4 pt-4 border-t border-slate-700/50 flex items-center justify-end text-xs text-slate-500">
-    <span id="respostaTimestamp"></span>
-</div>
+                    <div class="mt-4 pt-4 border-t border-slate-700/50 flex items-center justify-between text-xs text-slate-500">
+                        <span>💡 Clique nos links azuis para visualizar o documento</span>
+                        <span id="respostaTimestamp"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
-        // CONFIGURAÇÕES
+        // ==========================================
+        // CONFIGURAÇÕES - JÁ COM SEUS IDs!
+        // ==========================================
         const CONFIG = {
             username: 'admin',
             password: 'mvpmvp',
-            // URL original do n8n (vamos tentar uma abordagem diferente)
             webhookUrl: 'https://base-conhecimento-peach.vercel.app/api/webhook',
-            sessionTimeout: 2 * 60 * 60 * 1000 // 2 horas
+            sessionTimeout: 2 * 60 * 60 * 1000,
+            
+            // SEUS PDFs CONFIGURADOS! ✅
+            pdfFiles: {
+                'politica-criptografia.pdf': '1h5wkMttruBwv4xkvLvdrlJXi9SeRO226',
+                'politica-privacidade.pdf': '1rJaBINvZcg8vORJe-cTkiNEoAjiP8eKD',
+                'politica-anticorrupcao.pdf': '1GQSZQtiEhlFFm5pP8d4nzpn43aPFSzHw',
+                'politica-lavagem-dinheiro.pdf': '135i2y4DT3xq79ZqkNS7-VngFhjvI_yI0',
+                'politica-brindes.pdf': '1Qc6eWWyR38fhyztyTGq1Fl91HG5oW23g',
+                'codigo-etica.pdf': '1L3eivGW6mfZNvaKgHYp13wYZRKs1ULWt',
+                'politica-socioambiental.pdf': '1QHp-EhBKcCtQVR1HCiYctVJ1uO6QAJH7'
+            }
         };
 
-        // Elementos
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // ==========================================
+        // ELEMENTOS DO DOM
+        // ==========================================
         const loginScreen = document.getElementById('loginScreen');
         const mainApp = document.getElementById('mainApp');
         const loginForm = document.getElementById('loginForm');
@@ -264,11 +424,29 @@
         const loadingArea = document.getElementById('loadingArea');
         const respostaArea = document.getElementById('respostaArea');
         const respostaTexto = document.getElementById('respostaTexto');
-        const respostaModelo = document.getElementById('respostaModelo');
         const respostaTimestamp = document.getElementById('respostaTimestamp');
         const logoutButton = document.getElementById('logoutButton');
 
-        // Verifica autenticação inicial
+        const pdfModal = document.getElementById('pdfModal');
+        const closePdfBtn = document.getElementById('closePdfBtn');
+        const pdfTitle = document.getElementById('pdfTitle');
+        const pdfSubtitle = document.getElementById('pdfSubtitle');
+        const pdfCanvas = document.getElementById('pdfCanvas');
+        const prevPageBtn = document.getElementById('prevPageBtn');
+        const nextPageBtn = document.getElementById('nextPageBtn');
+        const currentPageSpan = document.getElementById('currentPage');
+        const totalPagesSpan = document.getElementById('totalPages');
+        const zoomInBtn = document.getElementById('zoomInBtn');
+        const zoomOutBtn = document.getElementById('zoomOutBtn');
+
+        let pdfDoc = null;
+        let currentPage = 1;
+        let pdfScale = 1.5;
+        let rendering = false;
+
+        // ==========================================
+        // AUTENTICAÇÃO
+        // ==========================================
         function checkAuth() {
             const authDataStr = localStorage.getItem('authData');
             
@@ -294,19 +472,16 @@
             }
         }
 
-        // Mostra tela de login
         function showLogin() {
             loginScreen.classList.remove('hidden');
             mainApp.classList.add('hidden');
         }
 
-        // Mostra aplicação principal
         function showMainApp() {
             loginScreen.classList.add('hidden');
             mainApp.classList.remove('hidden');
         }
 
-        // Login
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
             
@@ -330,40 +505,153 @@
             }
         });
 
-        // Logout
         logoutButton.addEventListener('click', () => {
             localStorage.removeItem('authData');
             showLogin();
         });
 
-        // Consultar
-        consultarButton.addEventListener('click', fazerPergunta);
+        // ==========================================
+        // PDF VIEWER
+        // ==========================================
+        async function renderPage(num) {
+            if (rendering || !pdfDoc) return;
+            rendering = true;
 
-        // Exemplos
+            try {
+                const page = await pdfDoc.getPage(num);
+                const viewport = page.getViewport({ scale: pdfScale });
+                
+                const context = pdfCanvas.getContext('2d');
+                pdfCanvas.height = viewport.height;
+                pdfCanvas.width = viewport.width;
+
+                await page.render({
+                    canvasContext: context,
+                    viewport: viewport
+                }).promise;
+
+                currentPage = num;
+                currentPageSpan.textContent = num;
+                
+                prevPageBtn.disabled = (num <= 1);
+                nextPageBtn.disabled = (num >= pdfDoc.numPages);
+                
+                rendering = false;
+            } catch (error) {
+                console.error('Erro ao renderizar página:', error);
+                rendering = false;
+            }
+        }
+
+        async function openPDF(filename, pageNum = 1) {
+            const driveId = CONFIG.pdfFiles[filename];
+            
+            if (!driveId) {
+                alert('⚠️ PDF não encontrado: ' + filename);
+                console.error('Arquivo não mapeado:', filename);
+                return;
+            }
+
+            try {
+                pdfModal.classList.remove('hidden');
+                pdfModal.classList.add('show');
+                pdfTitle.textContent = 'Carregando documento...';
+                pdfSubtitle.textContent = 'Aguarde...';
+
+                const pdfUrl = `https://drive.google.com/uc?export=download&id=${driveId}`;
+                
+                console.log('Abrindo PDF:', filename, 'na página', pageNum);
+                
+                const loadingTask = pdfjsLib.getDocument(pdfUrl);
+                pdfDoc = await loadingTask.promise;
+                
+                totalPagesSpan.textContent = pdfDoc.numPages;
+                pdfTitle.textContent = filename.replace('.pdf', '').replace(/-/g, ' ').toUpperCase();
+                pdfSubtitle.textContent = `${pdfDoc.numPages} páginas disponíveis`;
+                
+                await renderPage(pageNum);
+            } catch (error) {
+                console.error('Erro ao abrir PDF:', error);
+                alert('Erro ao carregar o PDF. Verifique se o arquivo está compartilhado publicamente no Google Drive.');
+                closePDFViewer();
+            }
+        }
+
+        function closePDFViewer() {
+            pdfModal.classList.add('hidden');
+            pdfModal.classList.remove('show');
+            if (pdfDoc) {
+                pdfDoc.destroy();
+                pdfDoc = null;
+            }
+        }
+
+        closePdfBtn.addEventListener('click', closePDFViewer);
+        
+        pdfModal.addEventListener('click', (e) => {
+            if (e.target === pdfModal) closePDFViewer();
+        });
+
+        prevPageBtn.addEventListener('click', () => {
+            if (currentPage > 1) renderPage(currentPage - 1);
+        });
+
+        nextPageBtn.addEventListener('click', () => {
+            if (currentPage < pdfDoc.numPages) renderPage(currentPage + 1);
+        });
+
+        zoomInBtn.addEventListener('click', () => {
+            pdfScale += 0.25;
+            renderPage(currentPage);
+        });
+
+        zoomOutBtn.addEventListener('click', () => {
+            if (pdfScale > 0.5) {
+                pdfScale -= 0.25;
+                renderPage(currentPage);
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (!pdfModal.classList.contains('hidden')) {
+                if (e.key === 'Escape') closePDFViewer();
+                if (e.key === 'ArrowLeft') prevPageBtn.click();
+                if (e.key === 'ArrowRight') nextPageBtn.click();
+            }
+        });
+
+        // ==========================================
+        // CONSULTA IA
+        // ==========================================
+        consultarButton.addEventListener('click', fazerPergunta);
+        
+        perguntaInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                fazerPergunta();
+            }
+        });
+
         document.querySelectorAll('.exemplo-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 perguntaInput.value = btn.textContent.trim();
+                fazerPergunta();
             });
         });
 
-        // Fazer pergunta
         async function fazerPergunta() {
             const pergunta = perguntaInput.value.trim();
             
             if (!pergunta) return;
 
-            // UI
             consultarButton.disabled = true;
-            consultarButton.textContent = 'Consultando...';
+            consultarButton.innerHTML = '<svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Consultando...';
             errorArea.classList.add('hidden');
             respostaArea.classList.add('hidden');
             loadingArea.classList.remove('hidden');
             exemplosArea.classList.add('hidden');
 
             try {
-                console.log('🚀 Enviando para:', CONFIG.webhookUrl);
-                console.log('📝 Pergunta:', pergunta);
-                
                 const response = await fetch(CONFIG.webhookUrl, {
                     method: 'POST',
                     headers: { 
@@ -373,36 +661,40 @@
                     body: JSON.stringify({ pergunta: pergunta })
                 });
 
-                console.log('📡 Status:', response.status);
-                console.log('📡 OK:', response.ok);
-
                 if (!response.ok) {
                     throw new Error(`Erro HTTP ${response.status}: ${response.statusText}`);
                 }
 
                 const data = await response.json();
-                console.log('✅ Dados recebidos:', data);
-
-                // Formata resposta
-                let respostaTextoFinal, modelo;
+                let respostaTextoFinal;
                 
                 if (data.choices && data.choices[0] && data.choices[0].message) {
                     respostaTextoFinal = data.choices[0].message.content;
-                    modelo = data.model || 'GPT-4o';
                 } else if (data.resposta) {
                     respostaTextoFinal = data.resposta;
-                    modelo = data.modelo || 'GPT-4o';
                 } else if (typeof data === 'string') {
                     respostaTextoFinal = data;
-                    modelo = 'GPT-4o';
                 } else {
                     respostaTextoFinal = JSON.stringify(data, null, 2);
-                    modelo = 'Resposta Raw';
                 }
 
-                // Mostra resposta
-                respostaTexto.textContent = respostaTextoFinal;
-                respostaModelo.textContent = `Modelo: ${modelo}`;
+                let htmlContent = marked.parse(respostaTextoFinal);
+                
+                htmlContent = htmlContent.replace(/href="FONTE:([^:]+):(\d+)"/g, (match, filename, page) => {
+                    return `href="#" data-pdf="${filename}" data-page="${page}" class="pdf-link"`;
+                });
+
+                respostaTexto.innerHTML = htmlContent;
+                
+                respostaTexto.querySelectorAll('.pdf-link').forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const filename = e.target.closest('a').dataset.pdf;
+                        const page = parseInt(e.target.closest('a').dataset.page);
+                        openPDF(filename, page);
+                    });
+                });
+
                 respostaTimestamp.textContent = new Date().toLocaleString('pt-BR');
                 
                 loadingArea.classList.add('hidden');
@@ -410,40 +702,18 @@
                 perguntaInput.value = '';
                 
             } catch (err) {
-                console.error('❌ Erro:', err);
+                console.error('Erro:', err);
                 
                 loadingArea.classList.add('hidden');
                 errorArea.classList.remove('hidden');
-                
-                let mensagemErro = err.message;
-                
-                if (err.message.includes('Failed to fetch')) {
-                    mensagemErro = `
-🚨 ERRO DE CONEXÃO
-
-Causas possíveis:
-• Workflow não está ATIVO no n8n
-• CORS não configurado corretamente
-• Falta o nó "Respond to Webhook" no final do workflow
-
-Verifique:
-1. Workflow "Políticas pt.2" está ativo (toggle verde)
-2. Nó Webhook tem CORS habilitado (Options > CORS > *)
-3. Último nó é "Respond to Webhook" retornando JSON
-
-URL: ${CONFIG.webhookUrl}
-                    `.trim();
-                }
-                
-                errorMessage.textContent = mensagemErro;
+                errorMessage.textContent = err.message;
                 exemplosArea.classList.remove('hidden');
             } finally {
                 consultarButton.disabled = false;
-                consultarButton.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg> Consultar';
+                consultarButton.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Consultar';
             }
         }
 
-        // Inicia
         checkAuth();
     </script>
 </body>
