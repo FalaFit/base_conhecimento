@@ -1,8 +1,9 @@
-<!DOCTYPE html>
+v<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://planejamentocomercialtvx.app.n8n.cloud;">
     <title>Sistema de Políticas Inteligente</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -26,6 +27,16 @@
         .pulse-glow {
             animation: pulse-glow 2s ease-in-out infinite;
         }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        
+        .animate-shake {
+            animation: shake 0.5s;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-screen">
@@ -33,19 +44,19 @@
 
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
+    <script>
+        const { useState, useEffect, createElement: h } = React;
 
-        // ⚙️ CONFIGURAÇÕES
+        // CONFIGURAÇÕES
         const AUTH_CONFIG = {
             username: 'admin',
             password: 'mvpmvp',
             WEBHOOK_URL: 'https://planejamentocomercialtvx.app.n8n.cloud/webhook/9d54034b-156c-473a-8a81-5cd73cc2b63d',
-            SESSION_TIMEOUT: 2 * 60 * 60 * 1000 // 2 horas em milissegundos
+            SESSION_TIMEOUT: 2 * 60 * 60 * 1000
         };
 
+        // Componente de Login
         function LoginScreen({ onLogin }) {
             const [username, setUsername] = useState('');
             const [password, setPassword] = useState('');
@@ -60,7 +71,6 @@
 
                 setTimeout(() => {
                     if (username === AUTH_CONFIG.username && password === AUTH_CONFIG.password) {
-                        // Salva com timestamp de expiração
                         const loginData = {
                             authenticated: true,
                             timestamp: Date.now(),
@@ -77,134 +87,92 @@
                 }, 800);
             };
 
-            return (
-                <div className="min-h-screen flex items-center justify-center px-4">
-                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
-                        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
-                    </div>
-
-                    <div className="w-full max-w-md relative animate-fade-in">
-                        <div className="text-center mb-8">
-                            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-2xl pulse-glow mb-6">
-                                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                </svg>
-                            </div>
-                            <h1 className="text-3xl font-bold text-white mb-2">Sistema de Políticas</h1>
-                            <p className="text-slate-400">Acesso seguro ao sistema de consultas</p>
-                        </div>
-
-                        <div className={`bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700 shadow-2xl overflow-hidden ${shake ? 'animate-shake' : ''}`}>
-                            <div className="p-8">
-                                <form onSubmit={handleLogin} className="space-y-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                                            Usuário
-                                        </label>
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                <svg className="h-5 w-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                                </svg>
-                                            </div>
-                                            <input
-                                                type="text"
-                                                value={username}
-                                                onChange={(e) => setUsername(e.target.value)}
-                                                className="w-full bg-slate-900/50 text-white placeholder-slate-500 rounded-xl border border-slate-600 pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                                placeholder="Digite seu usuário"
-                                                required
-                                                disabled={loading}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                                            Senha
-                                        </label>
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                <svg className="h-5 w-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                                </svg>
-                                            </div>
-                                            <input
-                                                type="password"
-                                                value={password}
-                                                onChange={(e) => setPassword(e.target.value)}
-                                                className="w-full bg-slate-900/50 text-white placeholder-slate-500 rounded-xl border border-slate-600 pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                                placeholder="Digite sua senha"
-                                                required
-                                                disabled={loading}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {error && (
-                                        <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-3 flex items-center gap-2 animate-fade-in">
-                                            <svg className="w-5 h-5 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                            <p className="text-sm text-red-300">{error}</p>
-                                        </div>
-                                    )}
-
-                                    <button
-                                        type="submit"
-                                        disabled={loading}
-                                        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-slate-700 disabled:to-slate-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-blue-500/50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                    >
-                                        {loading ? (
-                                            <>
-                                                <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                </svg>
-                                                Autenticando...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                                                </svg>
-                                                Entrar no Sistema
-                                            </>
-                                        )}
-                                    </button>
-                                </form>
-                            </div>
-
-                            <div className="bg-slate-900/30 px-8 py-4 border-t border-slate-700">
-                                <p className="text-xs text-slate-500 text-center">
-                                    🔒 Sessão expira em 2 horas de inatividade
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <style>{`
-                        @keyframes shake {
-                            0%, 100% { transform: translateX(0); }
-                            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-                            20%, 40%, 60%, 80% { transform: translateX(5px); }
-                        }
-                        .animate-shake {
-                            animation: shake 0.5s;
-                        }
-                    `}</style>
-                </div>
+            return h('div', { className: 'min-h-screen flex items-center justify-center px-4' },
+                h('div', { className: 'absolute inset-0 overflow-hidden pointer-events-none' },
+                    h('div', { className: 'absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl' }),
+                    h('div', { className: 'absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl' })
+                ),
+                h('div', { className: 'w-full max-w-md relative animate-fade-in' },
+                    h('div', { className: 'text-center mb-8' },
+                        h('div', { className: 'inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-2xl pulse-glow mb-6' },
+                            h('svg', { className: 'w-10 h-10 text-white', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                h('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' })
+                            )
+                        ),
+                        h('h1', { className: 'text-3xl font-bold text-white mb-2' }, 'Sistema de Políticas'),
+                        h('p', { className: 'text-slate-400' }, 'Acesso seguro ao sistema de consultas')
+                    ),
+                    h('div', { className: `bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700 shadow-2xl overflow-hidden ${shake ? 'animate-shake' : ''}` },
+                        h('div', { className: 'p-8' },
+                            h('form', { onSubmit: handleLogin, className: 'space-y-6' },
+                                h('div', null,
+                                    h('label', { className: 'block text-sm font-medium text-slate-300 mb-2' }, 'Usuário'),
+                                    h('div', { className: 'relative' },
+                                        h('div', { className: 'absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none' },
+                                            h('svg', { className: 'h-5 w-5 text-slate-500', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                                h('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' })
+                                            )
+                                        ),
+                                        h('input', {
+                                            type: 'text',
+                                            value: username,
+                                            onChange: (e) => setUsername(e.target.value),
+                                            className: 'w-full bg-slate-900/50 text-white placeholder-slate-500 rounded-xl border border-slate-600 pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all',
+                                            placeholder: 'Digite seu usuário',
+                                            required: true,
+                                            disabled: loading
+                                        })
+                                    )
+                                ),
+                                h('div', null,
+                                    h('label', { className: 'block text-sm font-medium text-slate-300 mb-2' }, 'Senha'),
+                                    h('div', { className: 'relative' },
+                                        h('div', { className: 'absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none' },
+                                            h('svg', { className: 'h-5 w-5 text-slate-500', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                                h('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' })
+                                            )
+                                        ),
+                                        h('input', {
+                                            type: 'password',
+                                            value: password,
+                                            onChange: (e) => setPassword(e.target.value),
+                                            className: 'w-full bg-slate-900/50 text-white placeholder-slate-500 rounded-xl border border-slate-600 pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all',
+                                            placeholder: 'Digite sua senha',
+                                            required: true,
+                                            disabled: loading
+                                        })
+                                    )
+                                ),
+                                error && h('div', { className: 'bg-red-500/10 border border-red-500/50 rounded-xl p-3 flex items-center gap-2 animate-fade-in' },
+                                    h('svg', { className: 'w-5 h-5 text-red-400 flex-shrink-0', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                        h('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' })
+                                    ),
+                                    h('p', { className: 'text-sm text-red-300' }, error)
+                                ),
+                                h('button', {
+                                    type: 'submit',
+                                    disabled: loading,
+                                    className: 'w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-slate-700 disabled:to-slate-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-blue-500/50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
+                                },
+                                    loading ? 'Autenticando...' : 'Entrar no Sistema'
+                                )
+                            )
+                        ),
+                        h('div', { className: 'bg-slate-900/30 px-8 py-4 border-t border-slate-700' },
+                            h('p', { className: 'text-xs text-slate-500 text-center' }, '🔒 Sessão expira em 2 horas de inatividade')
+                        )
+                    )
+                )
             );
         }
 
+        // Componente Principal
         function MainApp({ onLogout }) {
             const [pergunta, setPergunta] = useState('');
             const [loading, setLoading] = useState(false);
             const [resposta, setResposta] = useState(null);
             const [error, setError] = useState(null);
             const [historico, setHistorico] = useState([]);
-            const [debugInfo, setDebugInfo] = useState(null);
 
             const fazerPergunta = async () => {
                 if (!pergunta.trim()) return;
@@ -212,66 +180,42 @@
                 setLoading(true);
                 setError(null);
                 setResposta(null);
-                setDebugInfo(null);
 
                 try {
-                    console.log('🚀 Enviando requisição para:', AUTH_CONFIG.WEBHOOK_URL);
-                    console.log('📝 Pergunta:', pergunta.trim());
-
+                    console.log('🚀 Enviando para:', AUTH_CONFIG.WEBHOOK_URL);
+                    
                     const response = await fetch(AUTH_CONFIG.WEBHOOK_URL, {
                         method: 'POST',
                         headers: { 
                             'Content-Type': 'application/json',
                             'Accept': 'application/json'
                         },
-                        mode: 'cors',
                         body: JSON.stringify({ pergunta: pergunta.trim() })
                     });
 
-                    console.log('📡 Status da resposta:', response.status);
-                    console.log('📡 Headers:', [...response.headers.entries()]);
+                    console.log('📡 Status:', response.status);
 
                     if (!response.ok) {
-                        throw new Error(`Erro HTTP ${response.status}: ${response.statusText}`);
+                        throw new Error(`Erro HTTP ${response.status}`);
                     }
 
-                    const contentType = response.headers.get('content-type');
-                    console.log('📄 Content-Type:', contentType);
+                    const data = await response.json();
+                    console.log('✅ Dados:', data);
 
-                    let data;
-                    if (contentType && contentType.includes('application/json')) {
-                        data = await response.json();
-                    } else {
-                        const text = await response.text();
-                        console.log('📝 Resposta em texto:', text);
-                        try {
-                            data = JSON.parse(text);
-                        } catch (e) {
-                            throw new Error('Resposta não está em formato JSON válido');
-                        }
-                    }
-
-                    console.log('✅ Dados recebidos:', data);
-
-                    // Adapta a estrutura da resposta dependendo do formato
                     let respostaFormatada;
                     
                     if (data.choices && data.choices[0] && data.choices[0].message) {
-                        // Formato OpenAI direto
                         respostaFormatada = {
                             resposta: data.choices[0].message.content,
                             modelo: data.model || 'gpt-4o',
-                            timestamp: new Date().toISOString(),
-                            tokens: data.usage
+                            timestamp: new Date().toISOString()
                         };
                     } else if (data.resposta || typeof data === 'string') {
-                        // Formato customizado ou string direta
                         respostaFormatada = {
                             resposta: data.resposta || data,
                             timestamp: new Date().toISOString()
                         };
                     } else {
-                        // Formato desconhecido - mostra tudo
                         respostaFormatada = {
                             resposta: JSON.stringify(data, null, 2),
                             timestamp: new Date().toISOString()
@@ -288,46 +232,10 @@
                     setPergunta('');
                     
                 } catch (err) {
-                    console.error('❌ Erro completo:', err);
-                    
-                    let mensagemErro = err.message;
-                    
-                    if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-                        mensagemErro = `
-🚨 ERRO DE CONEXÃO (CORS/Network)
-
-Possíveis causas:
-1. ❌ Workflow não está ATIVO no n8n
-2. ❌ CORS não está habilitado no Webhook
-3. ❌ URL do webhook incorreta
-4. ❌ Problemas de rede/firewall
-
-SOLUÇÃO NO N8N:
-• Ative o workflow "Políticas pt.2"
-• No nó Webhook > Options > Ative CORS
-• Allowed Origins: * (ou seu domínio específico)
-• Salve e reative o workflow
-
-URL testada: ${AUTH_CONFIG.WEBHOOK_URL}
-                        `.trim();
-                    }
-                    
-                    setError(mensagemErro);
-                    setDebugInfo({
-                        erro: err.toString(),
-                        stack: err.stack,
-                        url: AUTH_CONFIG.WEBHOOK_URL,
-                        timestamp: new Date().toISOString()
-                    });
+                    console.error('❌ Erro:', err);
+                    setError(`Erro: ${err.message}. Verifique se o workflow está ativo e o CORS configurado.`);
                 } finally {
                     setLoading(false);
-                }
-            };
-
-            const handleKeyPress = (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    fazerPergunta();
                 }
             };
 
@@ -336,266 +244,68 @@ URL testada: ${AUTH_CONFIG.WEBHOOK_URL}
                 onLogout();
             };
 
-            const testarConexao = async () => {
-                setLoading(true);
-                setError(null);
-                
-                try {
-                    console.log('🔍 Testando conexão...');
-                    const response = await fetch(AUTH_CONFIG.WEBHOOK_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        mode: 'cors',
-                        body: JSON.stringify({ pergunta: 'teste de conexão' })
-                    });
-                    
-                    console.log('✅ Conexão OK! Status:', response.status);
-                    setError(`✅ Conexão estabelecida! Status: ${response.status}`);
-                } catch (err) {
-                    console.error('❌ Falha na conexão:', err);
-                    setError(`❌ Falha: ${err.message}`);
-                }
-                
-                setLoading(false);
-            };
-
-            const perguntasExemplo = [
-                "Qual a política sobre home office?",
-                "Como funciona o reembolso de despesas?",
-                "Regras sobre presentes e brindes",
-                "Política anticorrupção da empresa"
-            ];
-
-            return (
-                <div className="min-h-screen animate-fade-in">
-                    <div className="bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-10">
-                        <div className="max-w-6xl mx-auto px-6 py-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h1 className="text-xl font-bold text-white">Sistema de Políticas Inteligente</h1>
-                                        <p className="text-sm text-slate-400">Consulte políticas com IA</p>
-                                    </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={testarConexao}
-                                        className="flex items-center gap-2 px-3 py-2 bg-green-600/20 hover:bg-green-600/30 text-green-300 rounded-lg transition-colors text-sm"
-                                    >
-                                        🔍 Testar Conexão
-                                    </button>
-                                    <button
-                                        onClick={handleLogout}
-                                        className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors text-sm"
-                                    >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                        </svg>
-                                        Sair
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="max-w-6xl mx-auto px-6 py-8">
-                        <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700 p-6 mb-6 shadow-2xl">
-                            <label className="block text-sm font-medium text-slate-300 mb-3">
-                                Faça sua pergunta sobre as políticas:
-                            </label>
-                            
-                            <div className="flex gap-3">
-                                <textarea
-                                    value={pergunta}
-                                    onChange={(e) => setPergunta(e.target.value)}
-                                    onKeyPress={handleKeyPress}
-                                    placeholder="Ex: Qual a política sobre trabalho remoto?"
-                                    className="flex-1 bg-slate-900/50 text-white placeholder-slate-500 rounded-xl border border-slate-600 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                                    rows="3"
-                                    disabled={loading}
-                                />
-                                
-                                <button
-                                    onClick={fazerPergunta}
-                                    disabled={loading || !pergunta.trim()}
-                                    className="bg-blue-500 hover:bg-blue-600 disabled:bg-slate-700 disabled:cursor-not-allowed text-white px-6 rounded-xl transition-all duration-200 flex items-center gap-2 font-medium shadow-lg hover:shadow-blue-500/50"
-                                >
-                                    {loading ? (
-                                        <>
-                                            <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            Analisando...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                            </svg>
-                                            Consultar
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-
-                            {!resposta && !loading && (
-                                <div className="mt-4">
-                                    <p className="text-xs text-slate-400 mb-2">Exemplos de perguntas:</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {perguntasExemplo.map((exemplo, idx) => (
-                                            <button
-                                                key={idx}
-                                                onClick={() => setPergunta(exemplo)}
-                                                className="text-xs bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 px-3 py-1.5 rounded-lg transition-colors"
-                                            >
-                                                {exemplo}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {error && (
-                            <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-4 mb-6 animate-fade-in">
-                                <div className="flex items-start gap-3">
-                                    <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <div className="flex-1">
-                                        <p className="text-red-300 font-medium mb-2">Erro ao consultar</p>
-                                        <pre className="text-red-200/80 text-xs whitespace-pre-wrap font-mono bg-red-900/20 p-3 rounded">{error}</pre>
-                                    </div>
-                                </div>
-                                
-                                {debugInfo && (
-                                    <details className="mt-4">
-                                        <summary className="text-xs text-red-300 cursor-pointer hover:text-red-200">
-                                            🔍 Ver detalhes técnicos
-                                        </summary>
-                                        <pre className="mt-2 text-xs text-red-200/60 whitespace-pre-wrap font-mono bg-red-900/20 p-3 rounded">
-                                            {JSON.stringify(debugInfo, null, 2)}
-                                        </pre>
-                                    </details>
-                                )}
-                            </div>
-                        )}
-
-                        {loading && (
-                            <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700 p-8 text-center animate-fade-in">
-                                <svg className="animate-spin h-12 w-12 text-blue-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                <p className="text-slate-300">Analisando documentos...</p>
-                                <p className="text-slate-500 text-sm mt-2">Buscando as informações mais relevantes</p>
-                            </div>
-                        )}
-
-                        {resposta && (
-                            <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700 overflow-hidden shadow-2xl animate-fade-in">
-                                <div className="bg-green-500/10 border-b border-slate-700 px-6 py-3 flex items-center gap-2">
-                                    <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <span className="text-green-300 font-medium">Resposta encontrada</span>
-                                </div>
-
-                                <div className="p-6">
-                                    <div className="text-slate-100 leading-relaxed whitespace-pre-wrap">
-                                        {resposta.resposta}
-                                    </div>
-
-                                    {resposta.fontes && resposta.fontes.length > 0 && (
-                                        <div className="mt-6 pt-6 border-t border-slate-700">
-                                            <h3 className="text-sm font-semibold text-slate-300 mb-3">
-                                                📚 Fontes consultadas:
-                                            </h3>
-                                            <div className="space-y-2">
-                                                {resposta.fontes.map((fonte, idx) => (
-                                                    <div 
-                                                        key={idx}
-                                                        className="bg-slate-900/50 rounded-lg p-3 border border-slate-600/50"
-                                                    >
-                                                        <div className="flex items-start justify-between gap-3">
-                                                            <div className="flex-1">
-                                                                <p className="text-sm font-medium text-blue-300">
-                                                                    {fonte.documento || 'Documento'}
-                                                                </p>
-                                                                <p className="text-xs text-slate-400 mt-1">
-                                                                    Página {fonte.pagina || 'N/A'}
-                                                                </p>
-                                                            </div>
-                                                            <div className="text-xs text-slate-500">
-                                                                {(fonte.relevancia * 100).toFixed(0)}% relevante
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {resposta.tokens && (
-                                        <div className="mt-4 pt-4 border-t border-slate-700/50">
-                                            <p className="text-xs text-slate-500">
-                                                💬 Tokens: {resposta.tokens.total_tokens} 
-                                                ({resposta.tokens.prompt_tokens} prompt + {resposta.tokens.completion_tokens} completion)
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    <div className="mt-4 pt-4 border-t border-slate-700/50 flex items-center justify-between text-xs text-slate-500">
-                                        <span>Modelo: {resposta.modelo || 'GPT-4o'}</span>
-                                        <span>{new Date(resposta.timestamp).toLocaleString('pt-BR')}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {historico.length > 0 && (
-                            <div className="mt-8">
-                                <h2 className="text-lg font-semibold text-slate-300 mb-4">Histórico de Consultas</h2>
-                                <div className="space-y-3">
-                                    {historico.slice(0, 5).map((item, idx) => (
-                                        <button
-                                            key={idx}
-                                            onClick={() => {
-                                                setPergunta(item.pergunta);
-                                                setResposta(item.resposta);
-                                            }}
-                                            className="w-full bg-slate-800/30 hover:bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 text-left transition-colors"
-                                        >
-                                            <p className="text-sm text-slate-300 font-medium">{item.pergunta}</p>
-                                            <p className="text-xs text-slate-500 mt-1">
-                                                {new Date(item.timestamp).toLocaleString('pt-BR')}
-                                            </p>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="max-w-6xl mx-auto px-6 py-8 text-center text-slate-500 text-sm">
-                        <p>Sistema de Políticas Corporativas com IA</p>
-                        <p className="mt-1">Desenvolvido para consultas rápidas e precisas</p>
-                    </div>
-                </div>
+            return h('div', { className: 'min-h-screen animate-fade-in' },
+                h('div', { className: 'bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-10' },
+                    h('div', { className: 'max-w-6xl mx-auto px-6 py-4 flex items-center justify-between' },
+                        h('div', { className: 'flex items-center gap-3' },
+                            h('div', { className: 'w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center' },
+                                h('svg', { className: 'w-6 h-6 text-white', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                    h('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' })
+                                )
+                            ),
+                            h('div', null,
+                                h('h1', { className: 'text-xl font-bold text-white' }, 'Sistema de Políticas Inteligente'),
+                                h('p', { className: 'text-sm text-slate-400' }, 'Consulte políticas com IA')
+                            )
+                        ),
+                        h('button', {
+                            onClick: handleLogout,
+                            className: 'px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors text-sm'
+                        }, 'Sair')
+                    )
+                ),
+                h('div', { className: 'max-w-6xl mx-auto px-6 py-8' },
+                    h('div', { className: 'bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700 p-6 mb-6 shadow-2xl' },
+                        h('label', { className: 'block text-sm font-medium text-slate-300 mb-3' }, 'Faça sua pergunta sobre as políticas:'),
+                        h('div', { className: 'flex gap-3' },
+                            h('textarea', {
+                                value: pergunta,
+                                onChange: (e) => setPergunta(e.target.value),
+                                placeholder: 'Ex: Qual a política sobre trabalho remoto?',
+                                className: 'flex-1 bg-slate-900/50 text-white placeholder-slate-500 rounded-xl border border-slate-600 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none',
+                                rows: 3,
+                                disabled: loading
+                            }),
+                            h('button', {
+                                onClick: fazerPergunta,
+                                disabled: loading || !pergunta.trim(),
+                                className: 'bg-blue-500 hover:bg-blue-600 disabled:bg-slate-700 text-white px-6 rounded-xl transition-all font-medium'
+                            }, loading ? 'Consultando...' : 'Consultar')
+                        )
+                    ),
+                    error && h('div', { className: 'bg-red-500/10 border border-red-500/50 rounded-xl p-4 mb-6' },
+                        h('p', { className: 'text-red-300' }, error)
+                    ),
+                    loading && h('div', { className: 'bg-slate-800/50 rounded-2xl border border-slate-700 p-8 text-center' },
+                        h('p', { className: 'text-slate-300' }, 'Analisando documentos...')
+                    ),
+                    resposta && h('div', { className: 'bg-slate-800/50 rounded-2xl border border-slate-700 overflow-hidden' },
+                        h('div', { className: 'bg-green-500/10 border-b border-slate-700 px-6 py-3' },
+                            h('span', { className: 'text-green-300 font-medium' }, '✅ Resposta encontrada')
+                        ),
+                        h('div', { className: 'p-6' },
+                            h('div', { className: 'text-slate-100 leading-relaxed whitespace-pre-wrap' }, resposta.resposta)
+                        )
+                    )
+                )
             );
         }
 
+        // App Principal
         function App() {
             const [authenticated, setAuthenticated] = useState(false);
 
             useEffect(() => {
-                // Verifica autenticação com expiração
                 const authDataStr = localStorage.getItem('authData');
                 
                 if (authDataStr) {
@@ -603,54 +313,28 @@ URL testada: ${AUTH_CONFIG.WEBHOOK_URL}
                         const authData = JSON.parse(authDataStr);
                         const now = Date.now();
                         
-                        // Verifica se a sessão expirou
                         if (authData.expiresAt && now > authData.expiresAt) {
-                            console.log('🕐 Sessão expirada');
                             localStorage.removeItem('authData');
                             setAuthenticated(false);
                         } else {
-                            console.log('✅ Sessão válida');
                             setAuthenticated(authData.authenticated === true);
                         }
                     } catch (e) {
-                        console.error('❌ Erro ao validar sessão:', e);
                         localStorage.removeItem('authData');
                         setAuthenticated(false);
                     }
-                } else {
-                    setAuthenticated(false);
                 }
-
-                // Verifica periodicamente se a sessão expirou (a cada 1 minuto)
-                const intervalId = setInterval(() => {
-                    const authDataStr = localStorage.getItem('authData');
-                    if (authDataStr) {
-                        try {
-                            const authData = JSON.parse(authDataStr);
-                            const now = Date.now();
-                            
-                            if (authData.expiresAt && now > authData.expiresAt) {
-                                console.log('🕐 Sessão expirou durante uso');
-                                localStorage.removeItem('authData');
-                                setAuthenticated(false);
-                            }
-                        } catch (e) {
-                            console.error('❌ Erro na verificação periódica:', e);
-                        }
-                    }
-                }, 60000); // Verifica a cada 1 minuto
-
-                return () => clearInterval(intervalId);
             }, []);
 
             if (!authenticated) {
-                return <LoginScreen onLogin={() => setAuthenticated(true)} />;
+                return h(LoginScreen, { onLogin: () => setAuthenticated(true) });
             }
 
-            return <MainApp onLogout={() => setAuthenticated(false)} />;
+            return h(MainApp, { onLogout: () => setAuthenticated(false) });
         }
 
-        ReactDOM.render(<App />, document.getElementById('app'));
+        // Renderiza
+        ReactDOM.render(h(App), document.getElementById('app'));
     </script>
 </body>
 </html>
