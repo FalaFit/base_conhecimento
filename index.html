@@ -242,7 +242,8 @@
         const CONFIG = {
             username: 'admin',
             password: 'mvpmvp',
-            webhookUrl: 'https://planejamentocomercialtvx.app.n8n.cloud/webhook/9d54034b-156c-473a-8a81-5cd73cc2b63d',
+            // TEMPORÁRIO: usando proxy CORS para teste
+            webhookUrl: 'https://corsproxy.io/?' + encodeURIComponent('https://planejamentocomercialtvx.app.n8n.cloud/webhook/9d54034b-156c-473a-8a81-5cd73cc2b63d'),
             sessionTimeout: 2 * 60 * 60 * 1000 // 2 horas
         };
 
